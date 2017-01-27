@@ -10,7 +10,7 @@ Required :
 Starting
 =
 
-- git clone 
+- `git clone `
 - docker-compose up -d
 - docker exec -it nodealgosolver_node_1 bash
 - npm install
