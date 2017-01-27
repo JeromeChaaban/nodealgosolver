@@ -21,7 +21,7 @@ Fast playing
 =
 
 - `npm run create -- nameOfYourExercice` => This command creates a new folder called exercice_nameOfYourExercice with several files in it. You are ready to go !
-- cd exercice_nameOfYourExercice
+- `cd exercice_nameOfYourExercice`
 - edit the solver.ts and input.in files situated in the newly created folder exercice_nameOfYourExercice
 - `tsc && node solver.js` when you are ready (you must execute those command in exercice_nameOfYourExercice folder)
 
