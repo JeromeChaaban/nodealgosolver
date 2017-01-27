@@ -174,3 +174,26 @@ As usual, you can put as much workers as you want.
 - Notes
 
 --hash is the same as --db option except that --hash option uses the identity answerDecorator which is generally adapted to Google Hash Code problems
+
+- Structure creation
+
+For example :
+```
+`CREATE TABLE `input` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uuid` varchar(100) DEFAULT NULL,
+  `data` longtext,
+  PRIMARY KEY (`id`),
+  KEY `idx_input_uuid` (`uuid`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+
+
+`CREATE TABLE `solution` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `input_uuid` varchar(100) DEFAULT NULL,
+  `answer` longtext,
+  `score` longtext,
+  PRIMARY KEY (`id`),
+  KEY `idx_solution_input_uuid` (`input_uuid`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;`
+```
