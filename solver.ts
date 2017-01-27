@@ -1,10 +1,15 @@
 import {AlgoSolver} from "./algosolver";
 
-let callback = function(input){
-    return input.a * input.b;
+let callback = (input) => {
+    let answer = input.a * input.b;
+    let score = Math.floor((Math.random() * 1000000) + 1);
+    return {
+        "answer":answer,
+        "score":score
+    };
 };
 
-let parser = function(algoSolver){
+let parser = (algoSolver) => {
     algoSolver.extraireLignes("input.in",(lignes) => {
         let nbTests = lignes.shift();
         for(let i = 0;i < nbTests;i++){

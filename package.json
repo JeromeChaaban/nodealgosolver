@@ -7,6 +7,7 @@
     "amqplib": "^0.5.1",
     "minimist": "^1.2.0",
     "moment": "^2.17.1",
+    "mysql": "^2.13.0",
     "uuid": "^3.0.1"
   },
   "devDependencies": {},

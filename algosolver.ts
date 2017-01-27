@@ -8,41 +8,68 @@ const amqp = require('amqplib/callback_api');
 const argParser = require('minimist');
 const guid = require('uuid/v4');
 const moment = require("moment");
+const maria = require('mysql');
 
 import {rabbitConnectionString} from "./env";
+import {mariadbCredentials} from "./env";
 
-export class AlgoSolver {
-    callback:any;
-    channel:any;
-    uuid:any;
-    async:boolean=false;
+class Solver {
+    algoSolver:any;
     reponses:any = [];
-    options:any;
+    constructor(algoSolver:any){
+        console.log("On sette l'algosolver");
+        this.algoSolver = algoSolver;
+    }
+    decorateAnswer(answer,index = -1){
+        let decorator = this.algoSolver.getAnswerDecorator();
+        let decoratedAnswer = decorator(answer,index);
 
-    constructor(callback:any, parser:any,options:any={}) {
-        this.callback = callback;
-        this.options = options;
-
-        //Extraction des arguments
-        let args = argParser(process.argv.slice(2));
-
-        if(args.async){
-            this.async = true;
-        }
-
-        //Si on n'est pas en mode asynchrone
-        if(!this.async){
-            console.log("Lancement en mode direct");
-            fs.writeFileSync("output.out","");
-            return parser(this);
-        }
-
-        //Si on n'est pas en mode direct c'est qu'on est en mode async
-        console.log("Lancement en mode async");
-        if(!args.sender && args._.length == 0){
-            console.log("Aucun id de queue fourni et pas de mode sender ou compile sélectionné !");
-            process.exit();
-        }
+        return decoratedAnswer;
+    }
+    writeToFile(data){
+        //On écrit en mode append sync dans le fichier. Le mode sync est là pour s'assurer qu'on écrit pas en ordre dispersé dans le fichier
+        fs.writeFileSync("output.out",data,{"flag":"a"});
+    }
+    clearFile(){
+        //On efface le fichier destination
+        fs.writeFileSync("output.out","");
+    }
+    send(data,index){
+        console.log("Sending",index);
+    }
+}
+class SyncSolver extends Solver {
+    constructor(algoSolver:any){
+        super(algoSolver);
+        this.clearFile();
+    }
+    send(data,index){
+        super.send(data,index);
+        let answer = this.algoSolver.callback(data);
+        this.reponses.push(answer);
+        let decoratedAnswer = this.decorateAnswer(answer,index);
+        this.writeToFile(decoratedAnswer);
+    }
+}
+class AsyncSolver extends Solver {
+    uuid: any;
+    constructor(algoSolver:any,uuid:any){
+        super(algoSolver);
+        this.uuid = uuid;
+    }
+    read(){
+        console.log("Reading",this.uuid);
+    }
+    compile(){
+        console.log("Compiling",this.uuid);
+        this.clearFile();
+    }
+}
+class RabbitSolver extends AsyncSolver {
+    channel:any;
+    
+    constructor(algoSolver:any,uuid:any){
+        super(algoSolver,uuid);
 
         //On se connecte
         let rabbitConnected = new Promise(function(resolve:any,reject:any){
@@ -56,44 +83,251 @@ export class AlgoSolver {
         //Une fois la connexion réalisée
         rabbitConnected.then(ch => {
             this.channel = ch;
-            if(args.sender){
-                this.uuid = moment().format("YYYYMMDD_HHmmss") + "_" + guid().replace(/-/g,"");
+            this.channel.assertQueue(this.uuid, {durable: true});
+
+            if(this.algoSolver.sender){
                 console.log("Le script écrira dans la queue : ",this.uuid);
                 console.log("Pour lire : node solver.js",this.uuid,"--async");
-                ch.assertQueue(this.uuid, {durable: true});
-                return parser(this);
+                this.algoSolver.parser(this.algoSolver);
+                return;
             }
 
-            this.uuid = args._[0];
-            let uuidReponse = this.uuid + "_reponse";
-            console.log("Nb messages",ch.assertQueue(this.uuid, {durable: true}));
-            ch.assertQueue(uuidReponse, {durable: true});
-            ch.prefetch(1);
-
             //Si on doit compiler les résultats
-            if(args.compile){
-                console.log("Compiling",this.uuid);
-                ch.consume(uuidReponse,function(msg) {
-                    let objetParse = JSON.parse(msg.content.toString());
-                    console.log("Nouvel objet reçu",objetParse);
-                    this.reponses.push(objetParse);
-                    ch.ack(msg);
-                }, {noAck: false});
+            if(this.algoSolver.compile){
+                this.compile();
                 return;
             }
 
             //Si on doit traiter le flux
-            console.log("Reading",this.uuid);
-            ch.consume(this.uuid,function(msg) {
+            this.read();
+            return;
+        });
+    }
+    getAnswerUuid() {
+        let uuidReponse = this.uuid + "_reponse";
+        return uuidReponse;
+    }
+    send(data,index) {
+        super.send(data,index);
+        this.channel.sendToQueue(this.uuid, new Buffer(JSON.stringify({index:index,input:data})), {persistent: true});
+    }
+    read() {
+        super.read();
+        this.channel.prefetch(1);
+        let uuidAnswer = this.getAnswerUuid();
+        this.channel.assertQueue(uuidAnswer, {durable: true});
+
+        this.channel.consume(this.uuid,(msg) => {
+            let objetParse = JSON.parse(msg.content.toString());
+            console.log("Nouvel objet reçu",objetParse);
+            let answer = this.algoSolver.callback(objetParse["input"]);
+            console.log("Réponse à l'input",answer);
+            this.channel.sendToQueue(uuidAnswer, new Buffer(JSON.stringify({answer:answer,index:objetParse.index})), {persistent: true});
+            this.channel.ack(msg);
+        }, {noAck: false});
+
+    }
+    compile() {
+        super.compile();
+        this.channel.prefetch(false);
+        let uuidAnswer = this.getAnswerUuid();
+
+        //On a besoin du nombre de messages à compiler, d'où le callback
+        this.channel.assertQueue(uuidAnswer, {durable: true},(err,info) => {
+            let nbMessages = info.messageCount;
+            console.log("Il y a",nbMessages,"messages à compiler");
+            this.channel.consume(uuidAnswer,(msg) => {
                 let objetParse = JSON.parse(msg.content.toString());
                 console.log("Nouvel objet reçu",objetParse);
-                let answer = callback(objetParse["input"]);
-                console.log("Réponse à l'input",answer);
-                ch.sendToQueue(uuidReponse, new Buffer(JSON.stringify({answer:answer,index:objetParse.index})), {persistent: true});
-                ch.ack(msg);
+                this.reponses.push(objetParse);
+                if(this.reponses.length == nbMessages){
+                    //On trie les réponses suivant leur index pour générer un fichier cohérent
+                    this.reponses.sort((x,y) => {
+                        return x.index - y.index;
+                    });
+                    let decoratedAnswers = this.reponses.map((reponse) => this.decorateAnswer(reponse.answer,reponse.index));
+                    this.writeToFile(decoratedAnswers.join(""));
+                    process.exit();
+                }
             }, {noAck: false});
-
         });
+        
+    }
+}
+class MariadbSolver extends AsyncSolver {
+    connection:any;
+    sent:boolean = false;
+    constructor(algoSolver:any,uuid:any) {
+        super(algoSolver,uuid);
+
+        this.connection = maria.createConnection(mariadbCredentials);
+
+        //Une fois la connexion réalisée
+        if(this.algoSolver.sender){
+            console.log("Le script écrira dans la queue : ",this.uuid);
+            console.log("Pour lire : node solver.js",this.uuid,"--async --db");
+            this.algoSolver.parser(this.algoSolver);
+            return;
+        }
+
+        //Si on doit compiler les résultats
+        if(this.algoSolver.compile){
+            this.compile();
+            return;
+        }
+
+        //Si on doit traiter le flux
+        this.read();
+    }
+    send(data,index) {
+        super.send(data,index);
+        if(this.sent){
+            console.log("Le mode db n'est censé envoyer qu'un input !");
+            return;
+        }
+        let stringifiedData = JSON.stringify({index:index,input:data});
+        this.sent = true;
+        this.connection.query(`INSERT INTO input (uuid,data) VALUES ("${this.uuid}",${this.connection.escape(stringifiedData)})`, function (error, results, fields) {
+            console.log(error,results,fields);
+            process.exit();
+        });
+    }
+    read() {
+        super.read();
+        this.connection.query(`SELECT data FROM input WHERE uuid = "${this.uuid}" LIMIT 1`, (error, results, fields) => {
+            console.log(error,results,fields);
+            if(results.length != 1){
+                console.log("Il n'y a aucun résultat dans la table input correspond à cet uuid");
+            }
+
+            let objetParse = JSON.parse(results[0]["data"]);
+
+            let boucle = () => {
+                let metaAnswer = this.algoSolver.callback(objetParse["input"]);
+                //Le callback délivre un score
+                if(metaAnswer.score == undefined || metaAnswer.answer === undefined){
+                    console.log("Il n'y a aucun intérêt à ne pas renvoyer de score");
+                    process.exit();
+                }
+
+                let score = metaAnswer.score;
+                let answer = metaAnswer.answer;
+                let stringifiedAnswer = JSON.parse(answer);
+                let stringifiedScore = JSON.parse(score);
+
+                //On récupère le score maximum
+                this.connection.query(`SELECT score FROM solution WHERE input_uuid = "${this.uuid}"`, (error, results, fields) => {
+                    let okInsertion = results.length == 0;
+                    if(!okInsertion){
+                        let better = this.algoSolver.getBetter();
+
+                        let bestSavedScore = results.map((x) => JSON.parse(x.score)).reduce((x,y) => better(x,y));
+
+                        console.log("Meilleur score en base",bestSavedScore);
+
+                        if(bestSavedScore != score && better(score,bestSavedScore) == score){
+                            okInsertion = true;
+                        }
+                    }
+
+                    if(!okInsertion){
+                        boucle();
+                        return;
+                    }
+                    
+                    console.log("Nouveau meilleur score trouvé",score);
+
+                    this.connection.query(`INSERT INTO solution (input_uuid,answer,score) VALUES ("${this.uuid}",${this.connection.escape(stringifiedAnswer)},${this.connection.escape(stringifiedScore)})`, (error, results, fields) => {
+                        console.log(error,results,fields);
+                        console.log("On repart pour une boucle");
+                        boucle();
+                    });
+                });
+            };
+            console.log("On entame une boucle");
+            boucle();
+        });
+    }
+    compile(){
+        super.compile();
+        this.connection.query(`SELECT score,answer FROM solution WHERE input_uuid = "${this.uuid}"`, (error, results, fields) => {
+            if(results.length == 0){
+                console.log("Aucune solution à compiler !");
+                process.exit();
+            }
+
+            let better = this.algoSolver.getBetter();
+
+            let betterWrapper = (x,y) => {
+                let bestScore = better(x.score,y.score);
+                if(bestScore == x.score){
+                    return x;
+                }
+                return y;
+            };
+
+            let bestRow = results.reduce((x,y) => betterWrapper(x,y));
+
+            console.log("Meilleur enregistrement en base",bestRow);
+
+            let answer = JSON.parse(bestRow.answer);
+            let decoratedAnswer = this.decorateAnswer(answer);
+            console.log("Réponse décorée",decoratedAnswer);
+            this.writeToFile(decoratedAnswer);
+            return;
+        });
+    }
+}
+
+export class AlgoSolver {
+    callback:any;
+    parser:any;
+    options:any;
+    solver:any;
+    compile:boolean;
+    sender:boolean;
+
+    constructor(callback:any, parser:any,options:any={}) {
+        this.callback = callback;
+        this.parser = parser;
+        this.options = options;
+
+        //Extraction des arguments
+        let args = argParser(process.argv.slice(2));
+
+        //Si l'option hash est précisée et qu'aucun answerDecorator n'est fourni, on met le décorateur identité qui ne touche pas la réponse.
+        if((args.hash || args.hashCode) && !this.options.answerDecorator){
+            this.options.answerDecorator = (x) => x;
+        }
+
+        //Si on n'est pas en mode asynchrone, on résout en mode direct
+        if(!args.async){
+            console.log("Lancement en mode direct");
+            this.solver = new SyncSolver(this);
+            return parser(this);
+        }
+
+        //Si on n'est pas en mode direct c'est qu'on est en mode async
+        console.log("Lancement en mode async");
+
+        this.sender = args.sender;
+        this.compile = args.compile;
+
+        //En mode async, soit on est lancé en mode sender, soit on est lancé en mode reader soit on est lancé en mode compiler. Le mode reader étant celui par défaut
+        if(!this.sender && args._.length == 0){
+            console.log("Aucun id de queue fourni et pas de mode sender ou compile sélectionné !");
+            process.exit();
+        }
+
+        //Soit il y a un uuid fourni, soit on en génère un ayant la forme 20170126_191058_aaaae1eef1. On peut préciser si on le veut l'id pour le mode sender, mais de toutes façons un id sera généré
+        let uuid = args._.length > 0 ? args._[0] : moment().format("YYYYMMDD_HHmmss") + "_" + guid().replace(/-/g,"");
+
+        if(args.db){
+            this.solver = new MariadbSolver(this, uuid);
+            return;
+        }
+
+        this.solver = new RabbitSolver(this, uuid);
     }
     extraireLignes(filename:string,callback) {
         console.log("Extraction du fichier",filename);
@@ -103,30 +337,29 @@ export class AlgoSolver {
         });
     }
     send(data,index=-1){
-        //Si on est en mode direct (et non async), on résout directement le cas
-        if(!this.async){
-            let answer = this.callback(data);
-            this.reponses.push(answer);
-
-            let decorator = this.decorateAnswer;
-            if(this.options && this.options.answerDecorator){
-                decorator = this.options.answerDecorator;
-            }
-
-            let decoratedAnswer = decorator(answer,index);
-
-            //On écrit en mode append sync dans le fichier
-            return fs.writeFileSync("output.out",decoratedAnswer,{"flag":"a"});
-        }
-        console.log("Sending",index);
-        //Sinon on envoie sur la queue
-        this.channel.sendToQueue(this.uuid, new Buffer(JSON.stringify({index:index,input:data})), {persistent: true});
+        this.solver.send(data,index);
     }
-    decorateAnswer(answer,index){
+    baseAnswerDecorator(answer,index){
         let prefix = "\n";
         if(index == 0){
             prefix = "";
         }
         return prefix + "Case #" + (index + 1) + ": " + answer;
+    }
+    getAnswerDecorator(){
+        let decorator = this.baseAnswerDecorator;
+        if(this.options && this.options.answerDecorator){
+            decorator = this.options.answerDecorator;
+        }
+        return decorator;
+    }
+    getBetter(){
+        let better = Math.max;
+
+        if(this.options.better){
+            better = this.options.better;
+        }
+
+        return better;
     }
 }
