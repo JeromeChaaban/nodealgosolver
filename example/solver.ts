@@ -10,7 +10,7 @@ let callback = (input) => {
 };
 
 let parser = (algoSolver) => {
-    algoSolver.extraireLignes("input.in",(lignes) => {
+    algoSolver.extractLines("input.in",(lignes) => {
         let nbTests = lignes.shift();
         for(let i = 0;i < nbTests;i++){
             let [a,b] = lignes.shift().split(" ");

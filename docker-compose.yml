@@ -1,0 +1,5 @@
+node:
+  image: frelonquai/nodetsc
+  command: "sleep infinity"
+  volumes:
+    - ./:/var/www/projet
