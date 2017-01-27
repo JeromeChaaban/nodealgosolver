@@ -37,14 +37,15 @@ Three modes are existing
 Options
 
 - You can set an answer decorator. The base answer decorator is :
-
-``baseAnswerDecorator(answer,index){
+```
+baseAnswerDecorator(answer,index){
     let prefix = "\n";
     if(index == 0){
         prefix = "";
     }
     return prefix + "Case #" + (index + 1) + ": " + answer;
-}``
+}
+```
 
 A decorator will receive two arguments : the answer and the index. The baseAnswerDecorator will return the classic form of a test case in Google Code Jam or Facebook Hacker Cup.
 
