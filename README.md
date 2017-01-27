@@ -58,6 +58,46 @@ But if you prefer decorate yourself your answer, you can pass an option :
 
 This decorator for example lets the answer as it were.
 
+- You can change the file where the solution has to be written
+- You can change the better function
+
+Sync mode code example
+=
+- solver.ts
+
+```
+import {AlgoSolver} from "../bin/algosolver";
+
+let callback = (input) => {
+    let answer = input.a * input.b;
+    return answer;
+};
+
+let parser = (algoSolver) => {
+    algoSolver.extractLines("input.in",(lignes) => {
+        let nbTests = lignes.shift();
+        for(let i = 0;i < nbTests;i++){
+            let [a,b] = lignes.shift().split(" ");
+            algoSolver.send({a:a,b:b},i);
+        }
+    });
+};
+
+new AlgoSolver(callback,parser);
+```
+
+- Execution
+
+`tsc && node solver.js`
+
+- Notes
+
+When you call algoSolver.send, you send an input object. You can put anything you want. That's exactly the same object your callback function will receive as its first argument. The second argument of send is the index of the test case, starting from 0. If you don't have any index, let it free and juste call send.
+
+- Change answer decorator
+
+Just use `new AlgoSolver(callback,parser,{"answerDecorator":(x) => x});` instead of the last line.
+
 Mode RabbitMQ
 =
 
