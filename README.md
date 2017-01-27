@@ -22,7 +22,7 @@ Fast playing
 
 - `npm run create -- nameOfYourExercice` => This command creates a new folder called exercice_nameOfYourExercice with several files in it. You are ready to go !
 - edit the solver.ts and input.in files situated in the newly created folder exercice_nameOfYourExercice
-- `tsc && node exercice_nameOfYourExercice/solver.ts` when you are ready
+- `tsc && node exercice_nameOfYourExercice/solver.js` when you are ready
 
 Modes
 =
