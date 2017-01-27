@@ -35,6 +35,7 @@ Three modes are existing
 - async mode with MariaDB : in case there is ONE test case where you need to do the best score possible. In this scenario, every worker is working on the SAME input. Of course, it is useful only if your resolution includes some randomness. Ideal for Google Hash Code exercices.
 
 Options
+=
 
 - You can set an answer decorator. The base answer decorator is :
 ```
