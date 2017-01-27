@@ -3,6 +3,7 @@ declare var process: any
 declare var Buffer: any
 declare var Promise: any
 
+//@todo A remplacer avec des import ?
 const fs = require('fs');
 const amqp = require('amqplib/callback_api');
 const argParser = require('minimist');
@@ -10,8 +11,8 @@ const guid = require('uuid/v4');
 const moment = require("moment");
 const maria = require('mysql');
 
-import {rabbitConnectionString} from "./env";
-import {mariadbCredentials} from "./env";
+import {rabbitConnectionString} from "../env";
+import {mariadbCredentials} from "../env";
 
 class Solver {
     algoSolver:any;

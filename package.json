@@ -8,12 +8,13 @@
     "minimist": "^1.2.0",
     "moment": "^2.17.1",
     "mysql": "^2.13.0",
+    "ncp": "^2.0.0",
     "uuid": "^3.0.1"
   },
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "create": "tsc create.ts && node create.js"
+    "create": "tsc && node bin/create.js"
   },
   "author": "",
   "license": "ISC"

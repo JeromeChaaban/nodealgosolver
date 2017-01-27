@@ -3,3 +3,4 @@ node_modules
 input.in
 output.out
 env.ts
+exercice_*

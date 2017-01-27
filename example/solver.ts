@@ -1,4 +1,4 @@
-import {AlgoSolver} from "./algosolver";
+import {AlgoSolver} from "../bin/algosolver";
 
 let callback = (input) => {
     let answer = input.a * input.b;
