@@ -178,6 +178,7 @@ As usual, you can put as much workers as you want.
 - Structure creation
 
 For example :
+
 ```
 `CREATE TABLE `input` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -185,7 +186,7 @@ For example :
   `data` longtext,
   PRIMARY KEY (`id`),
   KEY `idx_input_uuid` (`uuid`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
 
 `CREATE TABLE `solution` (
@@ -195,5 +196,5 @@ For example :
   `score` longtext,
   PRIMARY KEY (`id`),
   KEY `idx_solution_input_uuid` (`input_uuid`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;`
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;`
 ```
