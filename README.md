@@ -31,35 +31,8 @@ Modes
 Three modes are existing
 
 - sync mode
-- async mode with RabbitMQ : in case there is several independent cases and you want to parallelize and use several cores of your computers or several computers. Each script treating one case at a time.
+- async mode with RabbitMQ : in case there is several independent cases and you want to parallelize and use several cores of your computers or several computers. Each script treats one case at a time.
 - async mode with MariaDB : in case there is ONE test case where you need to do the best score possible. In this scenario, every worker is working on the SAME input. Of course, it is useful only if your resolution includes some randomness. Ideal for Google Hash Code exercices.
-
-Options
-=
-
-- You can set an answer decorator. The base answer decorator is :
-```
-baseAnswerDecorator(answer,index){
-    let prefix = "\n";
-    if(index == 0){
-        prefix = "";
-    }
-    return prefix + "Case #" + (index + 1) + ": " + answer;
-}
-```
-
-A decorator will receive two arguments : the answer and the index. The baseAnswerDecorator will return the classic form of a test case in Google Code Jam or Facebook Hacker Cup.
-
-But if you prefer decorate yourself your answer, you can pass an option :
-
-{
-    "answerDecorator":(x) => x
-}
-
-This decorator for example lets the answer as it were.
-
-- You can change the file where the solution has to be written
-- You can change the better function
 
 Sync mode code example
 =
@@ -92,11 +65,41 @@ new AlgoSolver(callback,parser);
 
 - Notes
 
-When you call algoSolver.send, you send an input object. You can put anything you want. That's exactly the same object your callback function will receive as its first argument. The second argument of send is the index of the test case, starting from 0. If you don't have any index, let it free and juste call send.
+When you call algoSolver.send, you send an input object. You can put anything you want. That's exactly the same object your callback function will receive as its first argument. The second argument of send is the index of the test case, starting from 0. If you don't have any index, let it free and juste call send(data).
 
 - Change answer decorator
 
-Just use `new AlgoSolver(callback,parser,{"answerDecorator":(x) => x});` instead of the last line.
+Just use `new AlgoSolver(callback,parser,{"answerDecorator":(x) => x});` instead of the last line. See the options situated below for more explanations.
+
+Options
+=
+
+- You can set an answer decorator. The base answer decorator is :
+```
+baseAnswerDecorator(answer,index){
+    let prefix = "\n";
+    if(index == 0){
+        prefix = "";
+    }
+    return prefix + "Case #" + (index + 1) + ": " + answer;
+}
+```
+
+A decorator will receive two arguments : the answer and the index of the test case. The baseAnswerDecorator will return the classic form of a test case in Google Code Jam or Facebook Hacker Cup.
+
+But if you prefer decorate yourself your answer, you can pass an option object as a third argument to the AlgoSolver constructor :
+
+{"answerDecorator":(x) => x}
+
+This decorator for example lets the answer as it were.
+
+- You can change the file where the solution has to be written
+
+`{"outputFilename":"hello.out"}`
+
+- You can change the better function (see the MariaDB async mode for more explanations)
+
+`{"better":(x,y)=> Math.min }`
 
 Async mode RabbitMQ code example
 =
@@ -155,6 +158,12 @@ let callback = (input) => {
 `node solver.js aUniqueId --async --db`
 
 Each script will solve the input indefinitely. Obviously, if you have no randomness, you have nothing to do with this mode. When a script finds an answer, if also gets a score. It compares this score with the best score available in the database. If it has a better score, it writes it and makes it available to all other scripts working hard !
+
+- Better function
+
+The better function can be passed as an option to the AlgoSolver constructor. A better function will receive two scores and will choose which is the best. The base better function is the Math.max function. You can pass the Math.min function or anything custom you need. For example, you could pass this function which gives the longer string (a score could be a string or anythin else) :
+
+let better = (x,y) => x.length >= y.length ? x : y;
 
 As usual, you can put as much workers as you want.
 
