@@ -222,7 +222,9 @@ class MariadbSolver extends AsyncSolver {
                 //Si on a checké au moins une fois le score en db et que le score courant lui est soit égal, soit moins bon, ça ne sert à rien d'aller revérifier en db
                 if(bestSavedScore !== null && (score === bestSavedScore || better(score,bestSavedScore) === bestSavedScore)){
                     console.log("Résultat moins bon qu'au précédent check en db");
-                    boucle();
+                    setTimeout(function(){
+                        boucle();
+                    },0);
                     return;
                 }
 
