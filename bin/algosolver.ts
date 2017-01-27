@@ -203,6 +203,9 @@ class MariadbSolver extends AsyncSolver {
 
             let objetParse = JSON.parse(results[0]["data"]);
 
+            let bestSavedScore = null;
+            let better = this.algoSolver.getBetter();
+
             let boucle = () => {
                 let metaAnswer = this.algoSolver.callback(objetParse["input"]);
                 //Le callback délivre un score
@@ -216,13 +219,18 @@ class MariadbSolver extends AsyncSolver {
                 let stringifiedAnswer = JSON.parse(answer);
                 let stringifiedScore = JSON.parse(score);
 
+                //Si on a checké au moins une fois le score en db et que le score courant lui est soit égal, soit moins bon, ça ne sert à rien d'aller revérifier en db
+                if(bestSavedScore !== null && (score === bestSavedScore || better(score,bestSavedScore) === bestSavedScore)){
+                    console.log("Résultat moins bon qu'au précédent check en db");
+                    boucle();
+                    return;
+                }
+
                 //On récupère le score maximum
                 this.connection.query(`SELECT score FROM solution WHERE input_uuid = "${this.uuid}"`, (error, results, fields) => {
                     let okInsertion = results.length == 0;
                     if(!okInsertion){
-                        let better = this.algoSolver.getBetter();
-
-                        let bestSavedScore = results.map((x) => JSON.parse(x.score)).reduce((x,y) => better(x,y));
+                        bestSavedScore = results.map((x) => JSON.parse(x.score)).reduce((x,y) => better(x,y));
 
                         console.log("Meilleur score en base",bestSavedScore);
 
