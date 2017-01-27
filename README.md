@@ -11,18 +11,18 @@ Starting
 =
 
 - `git clone `
-- docker-compose up -d
-- docker exec -it nodealgosolver_node_1 bash
-- npm install
-- npm run init
-- Optional : edit env.ts (at root) credentials to connect to your RabbitMQ or MariaDB in case you want to use an async mode
+- `docker-compose up -d`
+- `docker exec -it nodealgosolver_node_1 bash`
+- `npm install`
+- `npm run init`
+- Optional : edit `env.ts` credentials to connect to your RabbitMQ or MariaDB in case you want to use an async mode
 
 Fast playing
 =
 
-- npm run create -- nameOfYourExercice => This command creates a new folder called exercice_nameOfYourExercice with several files in it. You are ready to go !
+- `npm run create -- nameOfYourExercice` => This command creates a new folder called exercice_nameOfYourExercice with several files in it. You are ready to go !
 - edit the solver.ts and input.in files situated in the newly created folder exercice_nameOfYourExercice
-- tsc && node exercice_nameOfYourExercice/solver.ts when you are ready
+- `tsc && node exercice_nameOfYourExercice/solver.ts` when you are ready
 
 Modes
 =
