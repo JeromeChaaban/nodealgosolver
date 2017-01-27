@@ -18,7 +18,7 @@ console.log("Création du dossier",nomDossierPrefixe);
 
 ncp("example",nomDossierPrefixe , function (err) {
     if (err) {
-    return console.error(err);
+        return console.error(err);
     }
     console.log("Dossier",nomDossierPrefixe,"créé");
 });
