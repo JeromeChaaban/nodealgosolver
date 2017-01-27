@@ -14,7 +14,7 @@
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "init": "cp env.ts.dist env.ts",
+    "init": "cp env.ts.dist env.ts && tsc",
     "create": "tsc && node bin/create.js"
   },
   "author": "",
