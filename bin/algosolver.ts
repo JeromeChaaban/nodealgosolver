@@ -207,6 +207,7 @@ class MariadbSolver extends AsyncSolver {
             let better = this.algoSolver.getBetter();
 
             let boucle = () => {
+                //@todo faire en sorte que si l'objet est modifié, ça n'impacte pas le tour suivant.
                 let metaAnswer = this.algoSolver.callback(objetParse["input"]);
                 //Le callback délivre un score
                 if(metaAnswer.score == undefined || metaAnswer.answer === undefined){
